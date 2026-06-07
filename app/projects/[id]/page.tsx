@@ -35,7 +35,15 @@ type Board = {
   project: { id: string; name: string; description?: string | null };
   columns: Record<'TODO' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED', Task[]>;
 };
-type Me = { id: string; roles: string[] };
+type Me = {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  department?: string | null;
+  isActive?: boolean;
+  roles: string[];
+};
 
 const statuses = ['TODO', 'IN_PROGRESS', 'BLOCKED', 'DONE'] as const;
 
@@ -100,7 +108,12 @@ export default function ProjectBoardPage() {
   const [taskCreateSuccess, setTaskCreateSuccess] = useState(false);
 
   function openTaskModal() {
-    setTaskForm({ title: '', description: '', assigneeId: '', clientVisible: false });
+    setTaskForm({
+      title: '',
+      description: '',
+      assigneeId: '',
+      clientVisible: false,
+    });
     setTaskCreateError('');
     setTaskCreateSuccess(false);
     setShowTaskModal(true);
@@ -116,17 +129,24 @@ export default function ProjectBoardPage() {
     assigneeId: '',
     clientVisible: false,
   });
-  const [dependencyForm, setDependencyForm] = useState({ taskId: '', dependsOnId: '' });
+  const [dependencyForm, setDependencyForm] = useState({
+    taskId: '',
+    dependsOnId: '',
+  });
   const [commentForm, setCommentForm] = useState('');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [activeTab, setActiveTab] = useState<'detail' | 'comments' | 'audit'>('detail');
+  const [activeTab, setActiveTab] = useState<'detail' | 'comments' | 'audit'>(
+    'detail',
+  );
 
   async function loadBoard() {
     if (!token) return;
     const [boardRes, meRes, usersRes] = await Promise.all([
       apiFetch<{ data: Board }>(`/projects/${params.id}/board`, { token }),
       apiFetch<{ data: Me }>('/users/me', { token }),
-      apiFetch<{ data: User[] }>('/users', { token }).catch(() => ({ data: [] })),
+      apiFetch<{ data: User[] }>('/users', { token }).catch(() => ({
+        data: [],
+      })),
     ]);
     setBoard(boardRes.data);
     setMe(meRes.data);
@@ -157,13 +177,18 @@ export default function ProjectBoardPage() {
 
   useEffect(() => {
     setAuthToken(token);
-    if (!token) { router.push('/login'); return; }
+    if (!token) {
+      router.push('/login');
+      return;
+    }
     loadBoard().catch(() => setError('Gagal memuat board'));
   }, [params.id]);
 
   // Close modal on Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') closeTaskModal(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeTaskModal();
+    };
     if (showTaskModal) window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [showTaskModal, taskCreateLoading]);
@@ -175,14 +200,19 @@ export default function ProjectBoardPage() {
   const assigneeOptions = useMemo(
     () =>
       users
-        .filter((u) => u.roles?.some((r) => ['ADMIN', 'PROJECT_MANAGER', 'CONTRIBUTOR'].includes(r)))
+        .filter((u) =>
+          u.roles?.some((r) =>
+            ['ADMIN', 'PROJECT_MANAGER', 'CONTRIBUTOR'].includes(r),
+          ),
+        )
         .map((u) => ({
           id: u.id,
           label: `${u.firstName || ''} ${u.lastName || ''} (${u.email})`.trim(),
         })),
     [users],
   );
-  const isPm = me?.roles?.includes('PROJECT_MANAGER') || me?.roles?.includes('ADMIN');
+  const isPm =
+    me?.roles?.includes('PROJECT_MANAGER') || me?.roles?.includes('ADMIN');
 
   async function handleCreateTask(e: React.FormEvent) {
     e.preventDefault();
@@ -326,7 +356,8 @@ export default function ProjectBoardPage() {
     if (!token || !selectedTask || !attachmentFile) return;
     const url = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onload = () =>
+        resolve(typeof reader.result === 'string' ? reader.result : '');
       reader.onerror = () => reject(new Error('Gagal membaca file'));
       reader.readAsDataURL(attachmentFile);
     });
@@ -351,10 +382,36 @@ export default function ProjectBoardPage() {
 
   if (!board) {
     return (
-      <div style={{ background: '#0A0E1A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          background: '#0A0E1A',
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 40, height: 40, border: '2px solid rgba(0,160,255,0.3)', borderTopColor: '#00A8FF', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, fontFamily: 'sans-serif' }}>Memuat board...</p>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: '2px solid rgba(0,160,255,0.3)',
+              borderTopColor: '#00A8FF',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 12px',
+            }}
+          />
+          <p
+            style={{
+              color: 'rgba(255,255,255,0.4)',
+              fontSize: 13,
+              fontFamily: 'sans-serif',
+            }}
+          >
+            Memuat board...
+          </p>
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </div>
       </div>
@@ -495,6 +552,20 @@ export default function ProjectBoardPage() {
 
         @media (max-width:900px) { .bp-sidebar { display:none; } }
 
+        /* ── Avatar menu ── */
+        .bp-avatar-wrap { position:relative; }
+        .bp-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,#0078FF,#00C8FF); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; cursor:pointer; flex-shrink:0; border:1.5px solid transparent; transition:border-color 0.15s; user-select:none; }
+        .bp-avatar:hover { border-color:rgba(0,200,255,0.55); }
+        .bp-avatar-popover { position:absolute; top:calc(100% + 10px); right:0; background:#0D1628; border:0.5px solid rgba(0,160,255,0.2); border-radius:12px; padding:14px 16px; min-width:210px; box-shadow:0 16px 48px rgba(0,0,0,0.65); z-index:50; animation:bp-pop-in 0.13s ease; }
+        @keyframes bp-pop-in { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        .bp-avatar-info { margin-bottom:10px; }
+        .bp-avatar-name { font-family:'Syne',sans-serif; font-size:13px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; }
+        .bp-avatar-email { font-size:11px; color:rgba(255,255,255,0.35); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:8px; }
+        .bp-avatar-role { display:inline-flex; align-items:center; gap:5px; background:rgba(0,120,255,0.12); border:0.5px solid rgba(0,160,255,0.22); border-radius:10px; padding:2px 10px; font-size:10px; font-weight:700; color:#00A8FF; letter-spacing:0.4px; text-transform:uppercase; }
+        .bp-avatar-divider { height:0.5px; background:rgba(255,255,255,0.07); margin:10px 0; }
+        .bp-avatar-logout { width:100%; background:rgba(255,60,60,0.07); border:0.5px solid rgba(255,60,60,0.18); border-radius:8px; padding:8px; font-size:12px; font-weight:700; color:#FF6B6B; font-family:'Plus Jakarta Sans',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background 0.15s; }
+        .bp-avatar-logout:hover { background:rgba(255,60,60,0.14); }
+
         /* ══════════════════════════════════════
            CREATE TASK MODAL
         ══════════════════════════════════════ */
@@ -628,44 +699,100 @@ export default function ProjectBoardPage() {
       `}</style>
 
       <div className='bp-page'>
-
         {/* ══ CREATE TASK MODAL ══ */}
         {showTaskModal && (
           <div
             className='modal-overlay'
-            onClick={(e) => { if (e.target === e.currentTarget) closeTaskModal(); }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) closeTaskModal();
+            }}
           >
-            <div className='modal-box' role='dialog' aria-modal='true' aria-labelledby='task-modal-title'>
+            <div
+              className='modal-box'
+              role='dialog'
+              aria-modal='true'
+              aria-labelledby='task-modal-title'
+            >
               <div className='modal-topbar' />
               <div className='modal-header'>
                 <div>
-                  <div className='modal-eyebrow'>Board · {board.project.name}</div>
-                  <div className='modal-title' id='task-modal-title'>Buat Task Baru</div>
+                  <div className='modal-eyebrow'>
+                    Board · {board.project.name}
+                  </div>
+                  <div className='modal-title' id='task-modal-title'>
+                    Buat Task Baru
+                  </div>
                 </div>
-                <button className='modal-close' onClick={closeTaskModal} disabled={taskCreateLoading} aria-label='Tutup'>×</button>
+                <button
+                  className='modal-close'
+                  onClick={closeTaskModal}
+                  disabled={taskCreateLoading}
+                  aria-label='Tutup'
+                >
+                  ×
+                </button>
               </div>
 
               <div className='modal-body'>
                 {taskCreateError && (
                   <div className='modal-error'>
-                    <svg width='14' height='14' viewBox='0 0 14 14' fill='none' aria-hidden='true'>
-                      <circle cx='7' cy='7' r='6' stroke='#FF6B6B' strokeWidth='1.3'/>
-                      <path d='M7 4.5V7.5M7 9.5v.3' stroke='#FF6B6B' strokeWidth='1.3' strokeLinecap='round'/>
+                    <svg
+                      width='14'
+                      height='14'
+                      viewBox='0 0 14 14'
+                      fill='none'
+                      aria-hidden='true'
+                    >
+                      <circle
+                        cx='7'
+                        cy='7'
+                        r='6'
+                        stroke='#FF6B6B'
+                        strokeWidth='1.3'
+                      />
+                      <path
+                        d='M7 4.5V7.5M7 9.5v.3'
+                        stroke='#FF6B6B'
+                        strokeWidth='1.3'
+                        strokeLinecap='round'
+                      />
                     </svg>
                     {taskCreateError}
                   </div>
                 )}
                 {taskCreateSuccess && (
                   <div className='modal-success'>
-                    <svg width='14' height='14' viewBox='0 0 14 14' fill='none' aria-hidden='true'>
-                      <circle cx='7' cy='7' r='6' stroke='#00D97A' strokeWidth='1.3'/>
-                      <path d='M4.5 7l2 2 3-3.5' stroke='#00D97A' strokeWidth='1.3' strokeLinecap='round' strokeLinejoin='round'/>
+                    <svg
+                      width='14'
+                      height='14'
+                      viewBox='0 0 14 14'
+                      fill='none'
+                      aria-hidden='true'
+                    >
+                      <circle
+                        cx='7'
+                        cy='7'
+                        r='6'
+                        stroke='#00D97A'
+                        strokeWidth='1.3'
+                      />
+                      <path
+                        d='M4.5 7l2 2 3-3.5'
+                        stroke='#00D97A'
+                        strokeWidth='1.3'
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                      />
                     </svg>
                     Task berhasil dibuat!
                   </div>
                 )}
 
-                <form id='create-task-form' onSubmit={handleCreateTask} style={{ display:'contents' }}>
+                <form
+                  id='create-task-form'
+                  onSubmit={handleCreateTask}
+                  style={{ display: 'contents' }}
+                >
                   {/* Title */}
                   <div className='modal-field'>
                     <label className='modal-label' htmlFor='task-title'>
@@ -676,7 +803,9 @@ export default function ProjectBoardPage() {
                       className='modal-input'
                       placeholder='Contoh: Desain halaman login'
                       value={taskForm.title}
-                      onChange={(e) => setTaskForm((s) => ({ ...s, title: e.target.value }))}
+                      onChange={(e) =>
+                        setTaskForm((s) => ({ ...s, title: e.target.value }))
+                      }
                       required
                       disabled={taskCreateLoading || taskCreateSuccess}
                       autoFocus
@@ -685,13 +814,20 @@ export default function ProjectBoardPage() {
 
                   {/* Description */}
                   <div className='modal-field'>
-                    <label className='modal-label' htmlFor='task-desc'>Deskripsi</label>
+                    <label className='modal-label' htmlFor='task-desc'>
+                      Deskripsi
+                    </label>
                     <textarea
                       id='task-desc'
                       className='modal-input modal-textarea'
                       placeholder='Jelaskan detail task ini... (opsional)'
                       value={taskForm.description}
-                      onChange={(e) => setTaskForm((s) => ({ ...s, description: e.target.value }))}
+                      onChange={(e) =>
+                        setTaskForm((s) => ({
+                          ...s,
+                          description: e.target.value,
+                        }))
+                      }
                       disabled={taskCreateLoading || taskCreateSuccess}
                     />
                   </div>
@@ -699,27 +835,44 @@ export default function ProjectBoardPage() {
                   {/* Assignee + Client visible */}
                   <div className='modal-grid-2'>
                     <div className='modal-field'>
-                      <label className='modal-label' htmlFor='task-assignee'>Assignee</label>
+                      <label className='modal-label' htmlFor='task-assignee'>
+                        Assignee
+                      </label>
                       <select
                         id='task-assignee'
                         className='modal-select'
                         value={taskForm.assigneeId}
-                        onChange={(e) => setTaskForm((s) => ({ ...s, assigneeId: e.target.value }))}
+                        onChange={(e) =>
+                          setTaskForm((s) => ({
+                            ...s,
+                            assigneeId: e.target.value,
+                          }))
+                        }
                         disabled={taskCreateLoading || taskCreateSuccess}
                       >
                         <option value=''>Pilih assignee</option>
                         {assigneeOptions.map((o) => (
-                          <option key={o.id} value={o.id}>{o.label}</option>
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
                         ))}
                       </select>
                     </div>
-                    <div className='modal-field' style={{ justifyContent:'flex-end' }}>
+                    <div
+                      className='modal-field'
+                      style={{ justifyContent: 'flex-end' }}
+                    >
                       <label className='modal-label'>Visibilitas</label>
                       <label className='modal-checkbox-row'>
                         <input
                           type='checkbox'
                           checked={taskForm.clientVisible}
-                          onChange={(e) => setTaskForm((s) => ({ ...s, clientVisible: e.target.checked }))}
+                          onChange={(e) =>
+                            setTaskForm((s) => ({
+                              ...s,
+                              clientVisible: e.target.checked,
+                            }))
+                          }
                           disabled={taskCreateLoading || taskCreateSuccess}
                         />
                         Tampilkan ke client
@@ -731,33 +884,70 @@ export default function ProjectBoardPage() {
                 <div className='modal-divider' />
 
                 <div className='modal-footer'>
-                  <button type='button' className='modal-cancel' onClick={closeTaskModal} disabled={taskCreateLoading}>
+                  <button
+                    type='button'
+                    className='modal-cancel'
+                    onClick={closeTaskModal}
+                    disabled={taskCreateLoading}
+                  >
                     Batal
                   </button>
                   <button
                     type='submit'
                     form='create-task-form'
                     className='modal-submit'
-                    disabled={taskCreateLoading || taskCreateSuccess || !taskForm.title.trim()}
+                    disabled={
+                      taskCreateLoading ||
+                      taskCreateSuccess ||
+                      !taskForm.title.trim()
+                    }
                   >
                     {taskCreateLoading ? (
-                      <><div className='modal-spinner' />Menyimpan...</>
+                      <>
+                        <div className='modal-spinner' />
+                        Menyimpan...
+                      </>
                     ) : taskCreateSuccess ? (
                       <>
-                        <svg width='14' height='14' viewBox='0 0 14 14' fill='none' aria-hidden='true'>
-                          <path d='M3 7l3 3 5-5.5' stroke='white' strokeWidth='1.8' strokeLinecap='round' strokeLinejoin='round'/>
+                        <svg
+                          width='14'
+                          height='14'
+                          viewBox='0 0 14 14'
+                          fill='none'
+                          aria-hidden='true'
+                        >
+                          <path
+                            d='M3 7l3 3 5-5.5'
+                            stroke='white'
+                            strokeWidth='1.8'
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                          />
                         </svg>
                         Tersimpan!
                       </>
                     ) : (
                       <>
-                        <svg width='14' height='14' viewBox='0 0 14 14' fill='none' aria-hidden='true'>
-                          <path d='M7 2v10M2 7h10' stroke='white' strokeWidth='2' strokeLinecap='round'/>
+                        <svg
+                          width='14'
+                          height='14'
+                          viewBox='0 0 14 14'
+                          fill='none'
+                          aria-hidden='true'
+                        >
+                          <path
+                            d='M7 2v10M2 7h10'
+                            stroke='white'
+                            strokeWidth='2'
+                            strokeLinecap='round'
+                          />
                         </svg>
                         Buat Task
                       </>
                     )}
-                    {!taskCreateLoading && !taskCreateSuccess && <div className='bp-shine' />}
+                    {!taskCreateLoading && !taskCreateSuccess && (
+                      <div className='bp-shine' />
+                    )}
                   </button>
                 </div>
               </div>
@@ -771,23 +961,45 @@ export default function ProjectBoardPage() {
             <div className='bp-logo'>
               <div className='bp-logo-icon'>
                 <svg width='14' height='14' viewBox='0 0 14 14' fill='none'>
-                  <path d='M2.5 7l3 3L11.5 3' stroke='white' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'/>
+                  <path
+                    d='M2.5 7l3 3L11.5 3'
+                    stroke='white'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                  />
                 </svg>
               </div>
               <span className='bp-logo-text'>Nodewave</span>
             </div>
             <div className='bp-nav-sep' />
             <div className='bp-breadcrumb'>
-              <button className='bp-breadcrumb-link' onClick={() => router.push('/dashboard')}>Dashboard</button>
+              <button
+                className='bp-breadcrumb-link'
+                onClick={() => router.push('/dashboard')}
+              >
+                Dashboard
+              </button>
               <span className='bp-breadcrumb-sep'>/</span>
-              <span className='bp-breadcrumb-current'>{board.project.name}</span>
+              <span className='bp-breadcrumb-current'>
+                {board.project.name}
+              </span>
             </div>
           </div>
           <div className='bp-nav-right'>
-            <button className='bp-btn-ghost' onClick={() => router.back()}>← Kembali</button>
-            <button className='bp-btn-ghost' onClick={() => router.push('/dashboard')}>Dashboard</button>
-            <button className='bp-btn-ghost' onClick={logout}>Logout</button>
-            <div className='bp-avatar'>PM</div>
+            <button className='bp-btn-ghost' onClick={() => router.back()}>
+              ← Kembali
+            </button>
+            <button
+              className='bp-btn-ghost'
+              onClick={() => router.push('/dashboard')}
+            >
+              Dashboard
+            </button>
+            <button className='bp-btn-ghost' onClick={logout}>
+              Logout
+            </button>
+            <BpAvatarMenu me={me} onLogout={logout} />
           </div>
         </nav>
 
@@ -803,8 +1015,19 @@ export default function ProjectBoardPage() {
             {isPm && (
               <button className='bp-btn-primary' onClick={openTaskModal}>
                 <div className='bp-shine' />
-                <svg width='13' height='13' viewBox='0 0 13 13' fill='none' aria-hidden='true'>
-                  <path d='M6.5 1v11M1 6.5h11' stroke='white' strokeWidth='2' strokeLinecap='round'/>
+                <svg
+                  width='13'
+                  height='13'
+                  viewBox='0 0 13 13'
+                  fill='none'
+                  aria-hidden='true'
+                >
+                  <path
+                    d='M6.5 1v11M1 6.5h11'
+                    stroke='white'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                  />
                 </svg>
                 Task Baru
               </button>
@@ -815,9 +1038,20 @@ export default function ProjectBoardPage() {
         {/* ── Error ── */}
         {error && (
           <div className='bp-error' role='alert'>
-            <svg width='14' height='14' viewBox='0 0 14 14' fill='none' aria-hidden='true'>
-              <circle cx='7' cy='7' r='6' stroke='#FF6B6B' strokeWidth='1.3'/>
-              <path d='M7 4.5V7.5M7 9.5v.3' stroke='#FF6B6B' strokeWidth='1.3' strokeLinecap='round'/>
+            <svg
+              width='14'
+              height='14'
+              viewBox='0 0 14 14'
+              fill='none'
+              aria-hidden='true'
+            >
+              <circle cx='7' cy='7' r='6' stroke='#FF6B6B' strokeWidth='1.3' />
+              <path
+                d='M7 4.5V7.5M7 9.5v.3'
+                stroke='#FF6B6B'
+                strokeWidth='1.3'
+                strokeLinecap='round'
+              />
             </svg>
             {error}
           </div>
@@ -826,40 +1060,71 @@ export default function ProjectBoardPage() {
         {/* ── Dependency Form (PM only) ── */}
         {isPm && allTasks.length > 1 && (
           <div className='bp-dep-panel'>
-            <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.3)', letterSpacing:'0.6px', textTransform:'uppercase', marginBottom:10 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.3)',
+                letterSpacing: '0.6px',
+                textTransform: 'uppercase',
+                marginBottom: 10,
+              }}
+            >
               Tambah Dependency
             </div>
             <form
               onSubmit={handleAddDependency}
-              style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:8, alignItems:'center' }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr auto',
+                gap: 8,
+                alignItems: 'center',
+              }}
             >
               <select
                 className='bp-select'
-                style={{ marginBottom:0 }}
+                style={{ marginBottom: 0 }}
                 value={dependencyForm.taskId}
-                onChange={(e) => setDependencyForm((s) => ({ ...s, taskId: e.target.value }))}
+                onChange={(e) =>
+                  setDependencyForm((s) => ({ ...s, taskId: e.target.value }))
+                }
               >
                 <option value=''>Pilih task</option>
                 {allTasks.map((t) => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
                 ))}
               </select>
               <select
                 className='bp-select'
-                style={{ marginBottom:0 }}
+                style={{ marginBottom: 0 }}
                 value={dependencyForm.dependsOnId}
-                onChange={(e) => setDependencyForm((s) => ({ ...s, dependsOnId: e.target.value }))}
+                onChange={(e) =>
+                  setDependencyForm((s) => ({
+                    ...s,
+                    dependsOnId: e.target.value,
+                  }))
+                }
               >
                 <option value=''>Bergantung pada</option>
-                {allTasks.filter((t) => t.id !== dependencyForm.taskId).map((t) => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
+                {allTasks
+                  .filter((t) => t.id !== dependencyForm.taskId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
               </select>
               <button
                 type='submit'
                 className='bp-save-btn'
-                style={{ marginBottom:0, whiteSpace:'nowrap' }}
-                disabled={loading || !dependencyForm.taskId || !dependencyForm.dependsOnId}
+                style={{ marginBottom: 0, whiteSpace: 'nowrap' }}
+                disabled={
+                  loading ||
+                  !dependencyForm.taskId ||
+                  !dependencyForm.dependsOnId
+                }
               >
                 Tambah
               </button>
@@ -882,8 +1147,15 @@ export default function ProjectBoardPage() {
                     onDrop={() => handleDrop(status)}
                   >
                     <div className='bp-col-header'>
-                      <span className='bp-col-label' style={{ color: meta.color }}>{meta.label}</span>
-                      <span className='bp-col-count'>{board.columns[status].length}</span>
+                      <span
+                        className='bp-col-label'
+                        style={{ color: meta.color }}
+                      >
+                        {meta.label}
+                      </span>
+                      <span className='bp-col-count'>
+                        {board.columns[status].length}
+                      </span>
                     </div>
 
                     {board.columns[status].map((task) => {
@@ -897,27 +1169,39 @@ export default function ProjectBoardPage() {
                           style={{ '--accent': meta.color } as any}
                           draggable
                           onDragStart={() => setDragTaskId(task.id)}
-                          onClick={() => { refreshTask(task.id); setActiveTab('detail'); }}
+                          onClick={() => {
+                            refreshTask(task.id);
+                            setActiveTab('detail');
+                          }}
                         >
                           <style>{`.bp-task[style*="--accent:${meta.color}"]::before{background:${meta.color}}`}</style>
                           <div className='bp-task-title'>{task.title}</div>
                           {task.description && (
                             <div className='bp-task-desc'>
-                              {task.description.length > 70 ? task.description.slice(0, 70) + '…' : task.description}
+                              {task.description.length > 70
+                                ? task.description.slice(0, 70) + '…'
+                                : task.description}
                             </div>
                           )}
                           <div className='bp-task-footer'>
-                            <span className={`bp-task-badge ${task.blockedByDependencies ? 'badge-blocked' : 'badge-ready'}`}>
+                            <span
+                              className={`bp-task-badge ${task.blockedByDependencies ? 'badge-blocked' : 'badge-ready'}`}
+                            >
                               {task.blockedByDependencies ? 'Blocked' : 'Ready'}
                             </span>
-                            {initials && <div className='bp-task-avatar'>{initials}</div>}
+                            {initials && (
+                              <div className='bp-task-avatar'>{initials}</div>
+                            )}
                           </div>
                         </div>
                       );
                     })}
 
                     {isPm && (
-                      <button className='bp-add-task-btn' onClick={openTaskModal}>
+                      <button
+                        className='bp-add-task-btn'
+                        onClick={openTaskModal}
+                      >
                         + Tambah task
                       </button>
                     )}
@@ -936,7 +1220,11 @@ export default function ProjectBoardPage() {
                   className={`bp-tab${activeTab === tab ? ' active' : ''}`}
                   onClick={() => setActiveTab(tab)}
                 >
-                  {tab === 'detail' ? 'Detail' : tab === 'comments' ? 'Komentar' : 'Audit Log'}
+                  {tab === 'detail'
+                    ? 'Detail'
+                    : tab === 'comments'
+                      ? 'Komentar'
+                      : 'Audit Log'}
                 </button>
               ))}
             </div>
@@ -945,10 +1233,20 @@ export default function ProjectBoardPage() {
             {activeTab === 'detail' && (
               <div className='bp-panel'>
                 {!selectedTask ? (
-                  <div className='bp-empty-sidebar'>Pilih task di board untuk melihat detail</div>
+                  <div className='bp-empty-sidebar'>
+                    Pilih task di board untuk melihat detail
+                  </div>
                 ) : (
                   <>
-                    <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:10 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: 8,
+                        marginBottom: 10,
+                      }}
+                    >
                       <div className='bp-detail-name'>{selectedTask.title}</div>
                       <span
                         className='bp-status-badge'
@@ -963,33 +1261,99 @@ export default function ProjectBoardPage() {
                       </span>
                     </div>
                     {selectedTask.description && (
-                      <div className='bp-detail-desc'>{selectedTask.description}</div>
+                      <div className='bp-detail-desc'>
+                        {selectedTask.description}
+                      </div>
                     )}
                     <table className='bp-meta-table'>
                       <tbody>
                         <tr>
                           <td>Assignee</td>
-                          <td>{selectedTask.assignee ? `${selectedTask.assignee.firstName || ''} ${selectedTask.assignee.lastName || ''}`.trim() : '—'}</td>
+                          <td>
+                            {selectedTask.assignee
+                              ? `${selectedTask.assignee.firstName || ''} ${selectedTask.assignee.lastName || ''}`.trim()
+                              : '—'}
+                          </td>
                         </tr>
-                        <tr><td>Version</td><td>v{selectedTask.version}</td></tr>
-                        <tr><td>Client visible</td><td>{selectedTask.clientVisible ? 'Ya' : 'Tidak'}</td></tr>
+                        <tr>
+                          <td>Version</td>
+                          <td>v{selectedTask.version}</td>
+                        </tr>
+                        <tr>
+                          <td>Client visible</td>
+                          <td>{selectedTask.clientVisible ? 'Ya' : 'Tidak'}</td>
+                        </tr>
                       </tbody>
                     </table>
 
                     {isPm && (
-                      <form onSubmit={handleEditTask} style={{ marginBottom:14 }}>
-                        <div className='bp-section-label' style={{ marginBottom:8 }}>Edit Task</div>
-                        <input className='bp-input' value={editForm.title} onChange={(e) => setEditForm((s) => ({ ...s, title: e.target.value }))} />
-                        <textarea className='bp-input' rows={2} style={{ resize:'none' }} value={editForm.description} onChange={(e) => setEditForm((s) => ({ ...s, description: e.target.value }))} />
-                        <select className='bp-select' value={editForm.assigneeId} onChange={(e) => setEditForm((s) => ({ ...s, assigneeId: e.target.value }))}>
+                      <form
+                        onSubmit={handleEditTask}
+                        style={{ marginBottom: 14 }}
+                      >
+                        <div
+                          className='bp-section-label'
+                          style={{ marginBottom: 8 }}
+                        >
+                          Edit Task
+                        </div>
+                        <input
+                          className='bp-input'
+                          value={editForm.title}
+                          onChange={(e) =>
+                            setEditForm((s) => ({
+                              ...s,
+                              title: e.target.value,
+                            }))
+                          }
+                        />
+                        <textarea
+                          className='bp-input'
+                          rows={2}
+                          style={{ resize: 'none' }}
+                          value={editForm.description}
+                          onChange={(e) =>
+                            setEditForm((s) => ({
+                              ...s,
+                              description: e.target.value,
+                            }))
+                          }
+                        />
+                        <select
+                          className='bp-select'
+                          value={editForm.assigneeId}
+                          onChange={(e) =>
+                            setEditForm((s) => ({
+                              ...s,
+                              assigneeId: e.target.value,
+                            }))
+                          }
+                        >
                           <option value=''>Unassigned</option>
-                          {assigneeOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                          {assigneeOptions.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.label}
+                            </option>
+                          ))}
                         </select>
                         <label className='bp-checkbox-row'>
-                          <input type='checkbox' checked={editForm.clientVisible} onChange={(e) => setEditForm((s) => ({ ...s, clientVisible: e.target.checked }))} />
+                          <input
+                            type='checkbox'
+                            checked={editForm.clientVisible}
+                            onChange={(e) =>
+                              setEditForm((s) => ({
+                                ...s,
+                                clientVisible: e.target.checked,
+                              }))
+                            }
+                          />
                           Client visible
                         </label>
-                        <button type='submit' className='bp-save-btn' disabled={loading}>
+                        <button
+                          type='submit'
+                          className='bp-save-btn'
+                          disabled={loading}
+                        >
                           {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
                         </button>
                       </form>
@@ -997,21 +1361,41 @@ export default function ProjectBoardPage() {
 
                     <div className='bp-section-label'>Pindah ke</div>
                     <div className='bp-move-grid'>
-                      {statuses.filter((s) => s !== selectedTask.status).map((s) => (
-                        <button key={s} className='bp-move-btn' onClick={() => updateTaskStatus(selectedTask, s)} type='button'>
-                          {STATUS_META[s].label}
-                        </button>
-                      ))}
+                      {statuses
+                        .filter((s) => s !== selectedTask.status)
+                        .map((s) => (
+                          <button
+                            key={s}
+                            className='bp-move-btn'
+                            onClick={() => updateTaskStatus(selectedTask, s)}
+                            type='button'
+                          >
+                            {STATUS_META[s].label}
+                          </button>
+                        ))}
                     </div>
 
                     {(selectedTask.dependencies?.length ?? 0) > 0 && (
-                      <div style={{ marginBottom:14 }}>
+                      <div style={{ marginBottom: 14 }}>
                         <div className='bp-section-label'>Dependencies</div>
                         {selectedTask.dependencies!.map((dep) => (
                           <div key={dep.id} className='bp-dep-item'>
-                            <span className='bp-dep-name'>{dep.dependsOn?.title || dep.dependsOnId}</span>
+                            <span className='bp-dep-name'>
+                              {dep.dependsOn?.title || dep.dependsOnId}
+                            </span>
                             {isPm && (
-                              <button className='bp-dep-del' onClick={() => handleDeleteDependency(selectedTask.id, dep.dependsOnId)} type='button'>×</button>
+                              <button
+                                className='bp-dep-del'
+                                onClick={() =>
+                                  handleDeleteDependency(
+                                    selectedTask.id,
+                                    dep.dependsOnId,
+                                  )
+                                }
+                                type='button'
+                              >
+                                ×
+                              </button>
                             )}
                           </div>
                         ))}
@@ -1019,24 +1403,54 @@ export default function ProjectBoardPage() {
                     )}
 
                     {taskDetails.attachments.length > 0 && (
-                      <div style={{ marginBottom:14 }}>
+                      <div style={{ marginBottom: 14 }}>
                         <div className='bp-section-label'>Lampiran</div>
                         {taskDetails.attachments.map((item: any) => (
-                          <a key={item.id} href={item.url} target='_blank' rel='noreferrer' className='bp-attach-link'>📎 {item.filename}</a>
+                          <a
+                            key={item.id}
+                            href={item.url}
+                            target='_blank'
+                            rel='noreferrer'
+                            className='bp-attach-link'
+                          >
+                            📎 {item.filename}
+                          </a>
                         ))}
                       </div>
                     )}
 
                     {selectedTask && (
-                      <form onSubmit={handleAttachmentUpload} style={{ marginBottom:14 }}>
+                      <form
+                        onSubmit={handleAttachmentUpload}
+                        style={{ marginBottom: 14 }}
+                      >
                         <div className='bp-section-label'>Upload Lampiran</div>
-                        <input type='file' className='bp-input' onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)} style={{ padding:'6px 10px' }} />
-                        <button type='submit' className='bp-save-btn' disabled={!attachmentFile} style={{ marginTop:4 }}>Upload</button>
+                        <input
+                          type='file'
+                          className='bp-input'
+                          onChange={(e) =>
+                            setAttachmentFile(e.target.files?.[0] || null)
+                          }
+                          style={{ padding: '6px 10px' }}
+                        />
+                        <button
+                          type='submit'
+                          className='bp-save-btn'
+                          disabled={!attachmentFile}
+                          style={{ marginTop: 4 }}
+                        >
+                          Upload
+                        </button>
                       </form>
                     )}
 
                     {isPm && (
-                      <button className='bp-delete-btn' onClick={handleDeleteTask} type='button' disabled={loading}>
+                      <button
+                        className='bp-delete-btn'
+                        onClick={handleDeleteTask}
+                        type='button'
+                        disabled={loading}
+                      >
                         🗑 Hapus Task
                       </button>
                     )}
@@ -1049,24 +1463,45 @@ export default function ProjectBoardPage() {
             {activeTab === 'comments' && (
               <div className='bp-panel'>
                 {!selectedTask ? (
-                  <div className='bp-empty-sidebar'>Pilih task untuk melihat komentar</div>
+                  <div className='bp-empty-sidebar'>
+                    Pilih task untuk melihat komentar
+                  </div>
                 ) : (
                   <>
-                    <div style={{ marginBottom:14 }}>
+                    <div style={{ marginBottom: 14 }}>
                       {taskDetails.comments.length ? (
                         taskDetails.comments.map((c: any) => (
                           <div key={c.id} className='bp-comment'>
-                            <div className='bp-comment-author'>{c.author?.firstName || 'Anonim'}</div>
+                            <div className='bp-comment-author'>
+                              {c.author?.firstName || 'Anonim'}
+                            </div>
                             <div className='bp-comment-body'>{c.content}</div>
                           </div>
                         ))
                       ) : (
-                        <div className='bp-empty-sidebar' style={{ padding:'12px 0' }}>Belum ada komentar</div>
+                        <div
+                          className='bp-empty-sidebar'
+                          style={{ padding: '12px 0' }}
+                        >
+                          Belum ada komentar
+                        </div>
                       )}
                     </div>
                     <form onSubmit={handleAddComment}>
-                      <textarea className='bp-comment-textarea' rows={3} placeholder='Tulis komentar...' value={commentForm} onChange={(e) => setCommentForm(e.target.value)} />
-                      <button className='bp-send-btn' type='submit' disabled={!commentForm.trim()}>Kirim Komentar</button>
+                      <textarea
+                        className='bp-comment-textarea'
+                        rows={3}
+                        placeholder='Tulis komentar...'
+                        value={commentForm}
+                        onChange={(e) => setCommentForm(e.target.value)}
+                      />
+                      <button
+                        className='bp-send-btn'
+                        type='submit'
+                        disabled={!commentForm.trim()}
+                      >
+                        Kirim Komentar
+                      </button>
                     </form>
                   </>
                 )}
@@ -1077,13 +1512,16 @@ export default function ProjectBoardPage() {
             {activeTab === 'audit' && (
               <div className='bp-panel'>
                 {!selectedTask ? (
-                  <div className='bp-empty-sidebar'>Pilih task untuk melihat audit log</div>
+                  <div className='bp-empty-sidebar'>
+                    Pilih task untuk melihat audit log
+                  </div>
                 ) : taskDetails.auditLogs.length ? (
                   taskDetails.auditLogs.map((log: any) => (
                     <div key={log.id} className='bp-log-item'>
                       <div className='bp-log-dot' />
                       <div className='bp-log-text'>
-                        <span className='bp-log-field'>{log.column}</span>: {String(log.oldValue)} → {String(log.newValue)}
+                        <span className='bp-log-field'>{log.column}</span>:{' '}
+                        {String(log.oldValue)} → {String(log.newValue)}
                       </div>
                     </div>
                   ))
@@ -1096,5 +1534,119 @@ export default function ProjectBoardPage() {
         </div>
       </div>
     </>
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// BpAvatarMenu — avatar navbar dengan data user login
+// ══════════════════════════════════════════════════════
+const BP_ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Admin',
+  PROJECT_MANAGER: 'Project Manager',
+  CONTRIBUTOR: 'Contributor',
+  CLIENT: 'Client',
+};
+
+function BpAvatarMenu({
+  me,
+  onLogout,
+}: {
+  me: Me | null;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const el = document.getElementById('bp-avatar-menu');
+      if (el && !el.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const initials = me
+    ? (() => {
+        const f = me.firstName?.trim()[0] ?? '';
+        const l = me.lastName?.trim()[0] ?? '';
+        return f || l ? `${f}${l}`.toUpperCase() : me.email[0].toUpperCase();
+      })()
+    : '…';
+
+  const displayName = me
+    ? [me.firstName, me.lastName].filter(Boolean).join(' ').trim() || me.email
+    : 'Memuat...';
+
+  const primaryRole = me?.roles?.[0];
+
+  return (
+    <div id='bp-avatar-menu' className='bp-avatar-wrap'>
+      <div
+        className='bp-avatar'
+        title={displayName}
+        onClick={() => setOpen((v) => !v)}
+        role='button'
+        aria-haspopup='true'
+        aria-expanded={open}
+        aria-label='Buka menu profil'
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+      >
+        {initials}
+      </div>
+
+      {open && (
+        <div className='bp-avatar-popover' role='menu' aria-label='Menu profil'>
+          <div className='bp-avatar-info'>
+            <div className='bp-avatar-name'>{displayName}</div>
+            <div className='bp-avatar-email'>{me?.email ?? ''}</div>
+            {primaryRole && (
+              <span className='bp-avatar-role'>
+                <svg
+                  width='5'
+                  height='5'
+                  viewBox='0 0 5 5'
+                  fill='none'
+                  aria-hidden='true'
+                >
+                  <circle cx='2.5' cy='2.5' r='2.5' fill='#00A8FF' />
+                </svg>
+                {BP_ROLE_LABELS[primaryRole] ?? primaryRole}
+              </span>
+            )}
+          </div>
+          <div className='bp-avatar-divider' />
+          <button
+            className='bp-avatar-logout'
+            onClick={onLogout}
+            role='menuitem'
+          >
+            <svg
+              width='13'
+              height='13'
+              viewBox='0 0 13 13'
+              fill='none'
+              aria-hidden='true'
+            >
+              <path
+                d='M4.5 2H3a1 1 0 00-1 1v7a1 1 0 001 1h1.5M8.5 9l2.5-2.5L8.5 4M11 6.5H5'
+                stroke='currentColor'
+                strokeWidth='1.4'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+              />
+            </svg>
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
